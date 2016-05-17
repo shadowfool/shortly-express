@@ -77,11 +77,12 @@ function(req, res) {
   if (req.session.username) {
     Links.reset().fetch().then(function(links) {
       res.status(200).send(links.models);
+      res.end();
     });
   } else {
     res.redirect('/login');
+    res.end();
   }
-  res.end();
 });
 
 app.post('/links', 
