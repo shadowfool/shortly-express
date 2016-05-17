@@ -33,6 +33,14 @@ h1 {
 
 .navigation .logout {
   float: right;
+  background-color: #00AAFF;
+  color: #FFF;
+}
+
+.navigation .logout:hover {
+  float: right;
+  background-color: #22CCFF;
+  color: #FFF;
 }
 
 .navigation li a , .logout {

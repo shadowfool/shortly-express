@@ -1,4 +1,5 @@
 var express = require('express');
+var session = require('express-session');
 var path = require('path');
 var util = require('./lib/utility');
 var partials = require('express-partials');
@@ -31,28 +32,39 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
 
+var sessionOptions = {secret:"secret"};
+
+app.use(session(sessionOptions));
+
+
+
 
 app.get('/', 
 function(req, res) {
-  // check if user is signed in
+  if (req.session.username) {
     res.render('index');
-  // else
-    // res.redirect('/login');
-    // res.status(403);
-    // res.end();
+  } else {
+    res.redirect('/login');
+  }
+  res.end();
 });
 
 app.get('/create', 
 function(req, res) {
   // res.render('index');
-    res.redirect('/login');
-    res.status(403);
-    res.end();
+  res.redirect('/login');
+  res.status(403);
+  res.end();
 });
 
 app.get('/login', 
 function(req, res) {
-  res.render('login');
+  if (req.session.username) {
+    res.render('index');
+  } else {
+    res.render('login');
+  }
+  res.end();
 });
 
 app.get('/signup', 
@@ -62,12 +74,14 @@ function(req, res) {
 
 app.get('/links', 
 function(req, res) {
-  Links.reset().fetch().then(function(links) {
-    res.status(200).send(links.models);
-  });
-    // res.redirect('/login');
-    // res.status(403);
-    // res.end();
+  if (req.session.username) {
+    Links.reset().fetch().then(function(links) {
+      res.status(200).send(links.models);
+    });
+  } else {
+    res.redirect('/login');
+  }
+  res.end();
 });
 
 app.post('/links', 
@@ -107,11 +121,35 @@ function(req, res) {
 /************************************************************/
 
 app.post('/login', function(req, res) {
-  console.log('hello');
-  res.end();
+  var username = req.body.username;
+  var password = req.body.password;
+
+  knex('users').where({username: username, password: password}).select('id')
+  .then(function(d) {
+    if (d.length >= 1) {
+      req.session.username = username;
+      res.redirect('/');
+    } else {
+      res.redirect('/login');
+    } 
+    res.end();
+  });
 });
 
+app.get('/logout', function(req, res) {
+  req.session.destroy(function(err) {
+    res.redirect('/');
+    res.end();
+  });
+});
+
+
 app.post('/signup', function(req, res) {
+  if (req.session.username) {
+    res.redirect('/');
+    res.end();
+    return;
+  }
   var username = req.body.username;
   var password = req.body.password;
   knex('users').where({username: username}).select('id').then(function(a) {
@@ -124,8 +162,10 @@ app.post('/signup', function(req, res) {
         password: password
       })
       .then(function(newLink) {
-        console.log(newLink);
-        res.status(201).send(newLink);
+        req.session.username = username;
+        res.status(201);
+        res.redirect('/');
+        res.end();
       });
     }
   });
