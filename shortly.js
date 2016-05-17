@@ -1,7 +1,16 @@
 var express = require('express');
+var path = require('path');
 var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
+var url = require('url');
+var knex = require('knex')({
+  client: 'sqlite3',
+  connection: {
+    filename: path.join(__dirname, 'db/shortly.sqlite')
+  },
+  useNullAsDefault: true
+});
 
 
 var db = require('./app/config');
@@ -25,12 +34,30 @@ app.use(express.static(__dirname + '/public'));
 
 app.get('/', 
 function(req, res) {
-  res.render('index');
+  // check if user is signed in
+    res.render('index');
+  // else
+    // res.redirect('/login');
+    // res.status(403);
+    // res.end();
 });
 
 app.get('/create', 
 function(req, res) {
-  res.render('index');
+  // res.render('index');
+    res.redirect('/login');
+    res.status(403);
+    res.end();
+});
+
+app.get('/login', 
+function(req, res) {
+  res.render('login');
+});
+
+app.get('/signup', 
+function(req, res) {
+  res.render('signup');
 });
 
 app.get('/links', 
@@ -38,12 +65,15 @@ function(req, res) {
   Links.reset().fetch().then(function(links) {
     res.status(200).send(links.models);
   });
+    // res.redirect('/login');
+    // res.status(403);
+    // res.end();
 });
 
 app.post('/links', 
 function(req, res) {
   var uri = req.body.url;
-
+  console.log(util.isValidUrl(uri));
   if (!util.isValidUrl(uri)) {
     console.log('Not a valid url: ', uri);
     return res.sendStatus(404);
@@ -76,6 +106,30 @@ function(req, res) {
 // Write your authentication routes here
 /************************************************************/
 
+app.post('/login', function(req, res) {
+  console.log('hello');
+  res.end();
+});
+
+app.post('/signup', function(req, res) {
+  var username = req.body.username;
+  var password = req.body.password;
+  knex('users').where({username: username}).select('id').then(function(a) {
+    if (a.length >= 1) {
+      res.redirect('/login');
+      res.sendStatus(200).end();
+    } else {
+      Users.create({
+        username: username,
+        password: password
+      })
+      .then(function(newLink) {
+        console.log(newLink);
+        res.status(201).send(newLink);
+      });
+    }
+  });
+});
 
 
 /************************************************************/
