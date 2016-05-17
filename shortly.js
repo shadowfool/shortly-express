@@ -17,8 +17,8 @@ var knex = require('knex')({
 var passport = require('passport');
 var gitHubStrategy = require('passport-github2').Strategy;
 
-var GITHUB_CLIENT_ID = "5791dc9c76d58ac0ec75";
-var GITHUB_CLIENT_SECRET = "5646c244d810ea413c27c150645095de17cb8048";
+var GITHUB_CLIENT_ID = '5791dc9c76d58ac0ec75';
+var GITHUB_CLIENT_SECRET = '5646c244d810ea413c27c150645095de17cb8048';
 
 var db = require('./app/config');
 var Users = require('./app/collections/users');
@@ -173,7 +173,7 @@ app.post('/login', function(req, res) {
     } else {
       res.redirect('/login');
     } 
-    res.end();
+    //res.end();
   });
 });
 
@@ -187,7 +187,7 @@ app.get('/logout', function(req, res) {
 app.post('/signup', function(req, res) {
   if (req.session.username) {
     res.redirect('/');
-    res.end();
+    //res.end();
     return;
   }
   var username = req.body.username;
@@ -195,7 +195,7 @@ app.post('/signup', function(req, res) {
   knex('users').where({username: username}).select('id').then(function(a) {
     if (a.length >= 1) {
       res.redirect('/login');
-      res.sendStatus(200).end();
+      //res.sendStatus(200).end();
     } else {
       Users.create({
         username: username,
