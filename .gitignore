@@ -1,7 +1,7 @@
 node_modules
 db/*.sqlite
 *.DS_Store
-
+config.js
 # Floobits
 .floo
 .floobit

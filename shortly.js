@@ -5,6 +5,7 @@ var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
 var url = require('url');
+var secrets = require('./config.js');
 
 var knex = require('knex')({
   client: 'sqlite3',
@@ -16,9 +17,6 @@ var knex = require('knex')({
 
 var passport = require('passport');
 var gitHubStrategy = require('passport-github2').Strategy;
-
-var GITHUB_CLIENT_ID = '5791dc9c76d58ac0ec75';
-var GITHUB_CLIENT_SECRET = '5646c244d810ea413c27c150645095de17cb8048';
 
 var db = require('./app/config');
 var Users = require('./app/collections/users');
@@ -51,8 +49,8 @@ passport.deserializeUser(function(obj, done) {
 app.use(session(sessionOptions));
 
 passport.use(new gitHubStrategy({
-  clientID: GITHUB_CLIENT_ID,
-  clientSecret: GITHUB_CLIENT_SECRET,
+  clientID: secrets.GITHUB_CLIENT_ID,
+  clientSecret: secrets.GITHUB_CLIENT_SECRET,
   callbackURL: 'http://127.0.0.1:4568/auth/github/callback'
 }, function(accessToken, refreshToken, profile, done) { 
   process.nextTick(function() {
@@ -64,57 +62,45 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 
-app.get('/', 
-function(req, res) {
-  if (util.checkUser(req, res)) {
+app.get('/', util.checkUser,
+  function(req, res) {
     res.render('index');
-  } else {
-    res.redirect('/login');
-  }
-  res.end();
-});
+  });
 
-app.get('/create', 
-function(req, res) {
-  // res.render('index');
-  res.redirect('/login');
-  res.status(403);
-  res.end();
-});
+app.get('/create', util.checkUser,
+  function(req, res) {
+    res.render('create');
+  });
 
 app.get('/login', 
-function(req, res) {
-  if (util.checkUser(req, res)) {
-    res.render('index');
-  } else {
+  function(req, res) {
     res.render('login');
-  }
-  res.end();
-});
+  });
 
 app.get('/signup', 
-function(req, res) {
-  res.render('signup');
-});
+  function(req, res) {
+    res.render('signup');
+  });
 
 app.get('/links', 
-function(req, res) {
-  if (util.checkUser(req, res)) {
-    Links.reset().fetch().then(function(links) {
-      res.status(200).send(links.models);
+  function(req, res) {
+    if (util.isLoggedIn(req)) {
+      Links.reset().fetch().then(
+        function(links) {
+          res.status(200).send(links.models);
+          res.end();
+        }
+      );
+    } else {
+      res.redirect('/login');
       res.end();
-    });
-  } else {
-    res.redirect('/login');
-    res.end();
-  }
-});
+    }
+  });
 
 
 app.post('/links', 
 function(req, res) {
   var uri = req.body.url;
-  console.log(util.isValidUrl(uri));
   if (!util.isValidUrl(uri)) {
     console.log('Not a valid url: ', uri);
     return res.sendStatus(404);
@@ -140,7 +126,7 @@ function(req, res) {
         });
       });
     }
-  });
+  }); 
 });
 
 /************************************************************/
