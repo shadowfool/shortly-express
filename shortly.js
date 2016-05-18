@@ -6,7 +6,7 @@ var partials = require('express-partials');
 var bodyParser = require('body-parser');
 var url = require('url');
 var secrets = require('./config.js');
-
+var bcrypt = require('bcrypt-nodejs');
 var knex = require('knex')({
   client: 'sqlite3',
   connection: {
@@ -36,7 +36,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
 
-var sessionOptions = { secret: 'secret' };
+var sessionOptions = { secret: 'some other thing!?' };
 
 passport.serializeUser(function(user, done) {
   done(null, user);
@@ -151,15 +151,20 @@ app.post('/login', function(req, res) {
   var username = req.body.username;
   var password = req.body.password;
 
-  knex('users').where({username: username, password: password}).select('id')
-  .then(function(d) {
-    if (d.length >= 1) {
-      req.session.username = username;
-      res.redirect('/');
+  knex('users').where({username: username}).select('password')
+  .then(function(data) {
+    if (data.length >= 1) {
+      bcrypt.compare(password, data[0].password, function(err, match) {
+        if (match) {
+          req.session.username = username;
+          res.redirect('/');
+        } else {
+          res.redirect('/login');
+        }
+      });
     } else {
       res.redirect('/login');
-    } 
-    //res.end();
+    }
   });
 });
 
@@ -171,27 +176,24 @@ app.get('/logout', function(req, res) {
 
 
 app.post('/signup', function(req, res) {
-  if (req.session.username) {
-    res.redirect('/');
-    //res.end();
-    return;
-  }
   var username = req.body.username;
   var password = req.body.password;
-  knex('users').where({username: username}).select('id').then(function(a) {
-    if (a.length >= 1) {
+
+  knex('users').where({username: username}).select('id').then(function(data) {
+    if (data.length >= 1) {
       res.redirect('/login');
-      //res.sendStatus(200).end();
     } else {
-      Users.create({
-        username: username,
-        password: password
-      })
-      .then(function(newLink) {
-        req.session.username = username;
-        res.status(201);
-        res.redirect('/');
-        res.end();
+      bcrypt.hash(password, null, null, function(err, hash) {
+        Users.create({
+          username: username,
+          password: hash
+        })
+        .then(function(newLink) {
+          req.session.username = username;
+          res.status(201);
+          res.redirect('/');
+          res.end();
+        });
       });
     }
   });
